@@ -26,7 +26,7 @@
 
 # Получаем access_token пользователя VK, user_id
 
-1. Чтобы получить access_token, app_id и user_id, перейдите по следующей 
+1. Чтобы получить access_token и user_id, перейдите по следующей 
 [ссылке](https://oauth.vk.com/authorize?client_id=51507079&display=page&redirect_uri=https://oauth.vk.com/blank.html&scope=friends,notify,photos,wall,email,mail,groups,stats&response_type=token&v=5.131&state=123456)
 Из адресной строки забираем текст между access_token= и &expires_in. Сохраняем данную строчку в текстовый 
 файл в переменную "access_token", а также сохраняем переменную "user_id"(идентификатор пользователя).
