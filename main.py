@@ -12,6 +12,7 @@ vk_token = os.getenv("TOKEN_VK")
 
 authorize = vk_api.VkApi(token=vk_token)
 longpoll = VkLongPoll(authorize)
+search_parameters = {"city": "", "gender": "", "age": ""}
 
 
 class ButtonVK():
@@ -21,13 +22,14 @@ class ButtonVK():
     confirmation = "Да верно"
     modify = "Изменить"
     gender_m = "Парень"
-    gender_f = "Девушка"
+    gender_w = "Девушка"
     city = "Город"
     gender = "Пол"
     age = "Возраст"
     next_user = "Следующий"
     favourites = "Фавориты"
     add_favour = "Добавить в фавориты"
+    watch_all = "Посмотрим всех"
 
 
 def write_message(sender, message, keyboard=None):
@@ -90,7 +92,7 @@ def gender(user_id):
     """
     keyboard = VkKeyboard(one_time=True)
     keyboard.add_button(ButtonVK.gender_m, VkKeyboardColor.PRIMARY)
-    keyboard.add_button(ButtonVK.gender_f, VkKeyboardColor.PRIMARY)
+    keyboard.add_button(ButtonVK.gender_w, VkKeyboardColor.PRIMARY)
     keyboard.add_line()
     keyboard.add_button(ButtonVK.finish, VkKeyboardColor.NEGATIVE)
     write_message(user_id, "Кто нужен?", keyboard)
@@ -115,7 +117,7 @@ def data_confirm(user_id, gender, city, age):
     write_message(user_id, f"Ищем {gender} из города {city.capitalize()} возрастом {age}", keyboard)
 
 
-def data_modify(user_id):
+def data_modify(user_id, city, age, gender):
     """
     отправка кнопок для выбора изменения
     """
@@ -141,5 +143,117 @@ def navigation(user_id):
     write_message(user_id, "Ну как тебе?", keyboard)
 
 
+def main():
+    flag = ""
+    for event in longpoll.listen():
+        if event.type == VkEventType.MESSAGE_NEW and event.to_me:
+            msg = event.message
+            user_id = event.user_id
+            if msg == "Начать" and flag == "":
+                start(user_id)
+                flag = "start"
+            if msg == ButtonVK.finish:
+                finish(user_id)
+                flag = ""
+            elif msg == ButtonVK.lets_go:
+                # удаляем бд
+                # создаем бд
+                city(user_id)
+                flag = "city"
+            elif flag == "city":
+                city_confirm(user_id, msg)
+                flag = msg
+            elif msg == ButtonVK.confirmation and flag != "data modify":
+                city_search = flag
+                search_parameters["city"] = city_search.capitalize()
+                flag = "gender"
+                gender(user_id)
+            elif msg == ButtonVK.city:
+                city(user_id)
+                if search_parameters["gender"] == "":
+                    flag = "city"
+                else:
+                    flag = "modify city"
+            elif msg == ButtonVK.gender_m and flag != "modify gender":
+                gender_search = msg
+                search_parameters["gender"] = "men"
+                age(user_id)
+                flag = "age"
+            elif msg == ButtonVK.gender_w and flag != "modify gender":
+                gender_search = msg
+                search_parameters["gender"] = "women"
+                age(user_id)
+                flag = "age"
+            elif flag == "age":
+                try:
+                    age_search = msg.strip()
+                    search_parameters["age"] = age_search
+                    flag = "data modify"
+                    data_confirm(
+                        user_id=user_id,
+                        city=search_parameters["city"],
+                        gender=gender_search,
+                        age=search_parameters["age"],
+                    )
+                except ValueError:
+                    write_message(user_id, "Технические неполадки")
+                    age(user_id)
+            elif msg == ButtonVK.modify:
+                data_confirm(user_id)
+            elif msg == ButtonVK.city:
+                city(user_id)
+                flag = "modify city"
+            elif flag == "modify city":
+                flag = "data modify"
+                new_city = msg
+                city_confirm(user_id, msg)
+            elif msg == ButtonVK.confirmation and flag == "data modify":
+                city_search = new_city
+                search_parameters["city"] = city_search.capitalize()
+                data_modify(
+                    user_id=user_id,
+                    city=search_parameters["city"],
+                    gender=gender_search,
+                    age=search_parameters["age"]
+                )
+            elif msg == ButtonVK.age:
+                age(user_id)
+                flag = "age"
+            elif msg == ButtonVK.gender:
+                flag = "modify gender"
+                gender(user_id)
+            elif msg == ButtonVK.gender_m and flag == "modify gender":
+                gender_search = msg
+                search_parameters["gender"] = "men"
+                data_modify(
+                    user_id=user_id,
+                    city=search_parameters["city"],
+                    age=search_parameters["age"],
+                    gender=gender_search,
+                )
+            elif msg == ButtonVK.gender_w and flag == "modify gender":
+                gender_search = msg
+                search_parameters["gender"] = "women"
+                data_modify(
+                    user_id=user_id,
+                    city=search_parameters["city"],
+                    age=search_parameters["age"],
+                    gender=gender_search
+                )
+            elif msg == ButtonVK.watch_all:
+                # логика вывода пользователей
+                pass
+            elif msg == ButtonVK.next_user:
+                # логика следующего вывода
+                pass
+            elif msg == ButtonVK.add_favour:
+                # логика добавления в фавориты
+                pass
+            elif msg == ButtonVK.favourites:
+                # логика вывода фаворитов
+                pass
+
+
 if __name__ == "__main__":
     print("Бот запущен!")
+    main()
